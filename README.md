@@ -6,7 +6,10 @@ Built as a self-directed learning project to explore 3D Gaussian Splatting, exte
 
 ## Demo
 
-![flythrough](assets/groot_flythrough.mp4)
+
+
+https://github.com/user-attachments/assets/d384bd2f-19e1-49da-a6b1-60fc67c6eb52
+
 *(reconstructed from ~2 minutes of handheld phone video)*
 
 ## Pipeline
