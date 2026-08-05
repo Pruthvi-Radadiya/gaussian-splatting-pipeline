@@ -1,31 +1,29 @@
 # Gaussian Splatting Pipeline
 
-An end-to-end pipeline that turns a short handheld video into a trained 3D Gaussian Splatting reconstruction - from raw footage to camera pose estimation to a rendered flythrough - wrapped in a single automated script.
+Video in, trained 3D Gaussian Splat out. Built this to actually understand the full pipeline (capture, camera pose estimation, training, rendering) instead of just reading about it.
 
-Built as a self-directed learning project to explore 3D Gaussian Splatting, extending my background in point cloud processing, multi-sensor calibration, and 3D geometry from autonomous perception work.
+My background is in multi-sensor calibration and point cloud processing (camera/LiDAR/radar fusion, 3D-2D and 3D-3D projections) from autonomous perception work, so this was a natural next thing to dig into.
 
 ## Demo
 
-
-
-https://github.com/user-attachments/assets/d384bd2f-19e1-49da-a6b1-60fc67c6eb52
+https://github.com/user-attachments/assets/b4bd633f-37be-48ca-964d-a8f218b5abb8
 
 *(reconstructed from ~2 minutes of handheld phone video)*
 
-## Pipeline
+## How it works
 
 ```
 video (.mp4)
-   │  ffmpeg - extract frames
+   │  ffmpeg: extract frames
    ▼
 image set (~150-300 frames)
-   │  COLMAP (via nerfstudio ns-process-data) - feature matching + camera pose estimation
+   │  COLMAP (via nerfstudio ns-process-data): feature matching + camera pose estimation
    ▼
 posed images (transforms.json)
-   │  nerfstudio ns-train splatfacto - iterative Gaussian Splatting optimization
+   │  nerfstudio ns-train splatfacto: iterative Gaussian Splatting optimization
    ▼
 trained 3D Gaussian Splat model
-   │  ns-render - camera path rendering
+   │  ns-render: camera path rendering
    ▼
 flythrough video
 ```
@@ -33,10 +31,10 @@ flythrough video
 ## Stack
 
 - [nerfstudio](https://docs.nerf.studio/) (`splatfacto` / gsplat backend)
-- COLMAP - structure-from-motion / camera pose estimation
+- COLMAP for structure-from-motion / pose estimation
 - PyTorch + CUDA 11.8
-- ffmpeg - video preprocessing
-- Run locally on an RTX 3060 laptop GPU via WSL2 (Ubuntu on Windows)
+- ffmpeg for frame extraction
+- Trained locally on an RTX 3060 laptop GPU (6GB VRAM) via WSL2
 
 ## Usage
 
@@ -47,22 +45,20 @@ chmod +x run_pipeline.sh
 ./run_pipeline.sh path/to/your_video.mp4 scene_name
 ```
 
-This runs the full pipeline: frame extraction → COLMAP pose estimation → Gaussian Splatting training → prints the trained config path. See `run_pipeline.sh` for the individual steps if you want to run/tune them separately (e.g. adjusting `--pipeline.datamanager.camera-res-scale-factor` for lower-VRAM GPUs).
+Runs the whole thing end to end: frame extraction → COLMAP pose estimation → training → prints the trained config path. Check `run_pipeline.sh` if you want to run steps individually or tune parameters (e.g. `--pipeline.datamanager.camera-res-scale-factor` if you're on a lower-VRAM GPU, I run at 0.5 to fit in 6GB).
 
-**Requirements:** NVIDIA GPU (6GB+ VRAM), nerfstudio installed (see [installation docs](https://docs.nerf.studio/quickstart/installation.html)), COLMAP.
+**Needs:** NVIDIA GPU (6GB+ VRAM), nerfstudio, COLMAP.
 
 ## What I learned
 
-- Reconstruction quality is bottlenecked far more by **capture quality** (overlap, motion blur, lighting consistency) than by training hyperparameters - a bad COLMAP registration rate (<85%) shows up as artifacts no amount of extra training fixes.
-- Concrete tradeoff observed: halving input resolution (`camera-res-scale-factor 0.5`) cut VRAM usage enough to avoid OOM on a 6GB laptop GPU, at a modest cost to fine detail sharpness.
-- Camera pose accuracy from COLMAP directly determines splat quality - garbage poses in, garbage splats out.
+- Capture quality matters way more than training hyperparameters. If COLMAP's registration rate drops below ~85%, no amount of extra training fixes the artifacts. The fix is a better capture, not more compute.
+- Downscaling input images to 0.5 was enough to avoid OOM on 6GB VRAM, at a small cost to fine detail.
+- Bad camera poses = bad splats. COLMAP's output quality is the real bottleneck, not the splatting itself.
 
-## Next steps
+## Next up
 
-- Automate a capture-quality check (registration rate threshold) before kicking off training, so bad captures fail fast instead of wasting a training run.
-- Explore cloud/Kubernetes deployment for scaled batch processing of multiple scenes.
-- Evaluate NVIDIA Isaac Sim / Omniverse import of trained splats for simulation use cases.
+- Add a registration-rate check before training so a bad capture fails fast instead of wasting a full run.
+- Look at deploying this on Kubernetes for batch processing multiple scenes.
+- Try importing trained splats into NVIDIA Isaac Sim / Omniverse.
 
-## License
 
-MIT
