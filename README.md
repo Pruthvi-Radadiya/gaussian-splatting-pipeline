@@ -1,16 +1,16 @@
-# 3D Gaussian Splatting → Mesh Extraction Pipeline
+# 3D Gaussian Splatting to Mesh Pipeline
 
-I started this wanting to go beyond papers on Gaussian Splatting — actually run the stack end to end on my own captures. First goal was a solid novel-view reconstruction. Second was getting a real surface mesh out of it, not just pretty fog.
+I wanted to run Gaussian Splatting end to end on my own captures instead of only reading the papers. The first goal was a clean novel-view reconstruction. The second was getting a real surface mesh out of it, because a splat is a cloud of blobs and most tools want triangles.
 
-Background: multi-sensor calibration and point cloud work (camera / LiDAR / radar, 3D–2D and 3D–3D projections) from autonomous perception. This project sits in that same geometry space.
+My background is multi-sensor calibration and point cloud work (camera, LiDAR, radar, 3D-2D and 3D-3D projections) in autonomous driving. This project sits in the same geometry space.
 
-Everything below ran locally on an RTX 3060 laptop (6GB) under WSL2.
+Everything here ran locally on an RTX 3060 laptop (6 GB) under WSL2.
 
 ---
 
-## What this repo covers
+## What's in this repo
 
-Two related pipelines that share COLMAP at the front, then diverge:
+Two pipelines that share COLMAP at the front and then split:
 
 ```
 capture (phone video / turntable photos)
@@ -24,16 +24,17 @@ COLMAP structure-from-motion
                                             ──► textured mesh ──► Blender cleanup
 ```
 
-Pipeline 1 is the learning path and the scripted demo in this repo.  
-Pipeline 2 is the part that matches what I put on my CV: splat → surface mesh.
+
+Pipeline 1 is the one I learned on, and it has a one-command script in this repo. 
+Pipeline 2 is the splat to surface mesh path.
 
 ---
 
-## Demo — Pipeline 1 (novel views)
+## Pipeline 1: novel views
 
 https://github.com/user-attachments/assets/b4bd633f-37be-48ca-964d-a8f218b5abb8
 
-Reconstructed from ~2 minutes of handheld phone video (Groot figure). Frames → COLMAP via `ns-process-data` → `ns-train splatfacto` → render.
+This was reconstructed from about 2 minutes of handheld phone video of a Groot figure. The steps are frames, COLMAP through `ns-process-data`, `ns-train splatfacto`, then render.
 
 ```
 video (.mp4)
@@ -60,7 +61,7 @@ chmod +x run_pipeline.sh
 ./run_pipeline.sh path/to/your_video.mp4 scene_name
 ```
 
-Needs NVIDIA GPU (6GB+), nerfstudio, COLMAP, ffmpeg. I use `--pipeline.datamanager.camera-res-scale-factor 0.5` so training fits in 6GB VRAM — tweak that in `run_pipeline.sh` if you have more headroom.
+You need an NVIDIA GPU (6 GB or more), nerfstudio, COLMAP and ffmpeg. I use `--pipeline.datamanager.camera-res-scale-factor 0.5` so training fits in 6 GB of VRAM. If you have more headroom, change it in `run_pipeline.sh`.
 
 ---
 
@@ -89,17 +90,17 @@ Both are the refined SuGaR output (`sugarfine_3Dgs7000_..._decim200000_...`), no
 ### Things that actually blocked me (and how I fixed them)
 
 **nerfstudio checkpoint ≠ what SuGaR wants.**  
-I first tried feeding a splatfacto / nerfstudio checkpoint into SuGaR. Format and coordinate conventions do not line up with the Inria 3DGS layout SuGaR wraps. Fix: retrain a dedicated vanilla 3DGS model in the original Inria pipeline, then hand that to SuGaR.
+I first tried feeding a splatfacto checkpoint into SuGaR. The format and coordinate conventions don't match the Inria 3DGS layout that SuGaR builds on. I retrained a separate vanilla 3DGS model in the original Inria pipeline and gave that to SuGaR.
 
 **Camera model.**  
-COLMAP was giving OPENCV cameras. SuGaR / Inria 3DGS expect PINHOLE after undistortion. Ran the standard undistort step so the scene matched what the rasterizer assumes.
+COLMAP produced OPENCV cameras, which include lens distortion. SuGaR and Inria 3DGS expect PINHOLE, so I ran the standard undistort step first.
 
 **CUDA / build pain on WSL.**  
-System toolkit was 12.x while the 3DGS / SuGaR path wanted 11.8-era builds. Isolated everything in conda, compiled the custom CUDA rasterization extensions from source, and chased missing runtime libs / GCC–glibc mismatches until `diff-gaussian-rasterization` actually linked and ran.
+My system toolkit was 12.x and the 3DGS and SuGaR code wanted 11.8. I put everything in a conda environment, compiled the custom CUDA rasterization extensions from source, and worked through missing runtime libraries and GCC/glibc mismatches until `diff-gaussian-rasterization` built and ran.
 
 ### Honest take on mesh quality
 
-The car is small, shiny, and I reconstructed the whole scene (table included), not a tightly masked object. You can see leftover ground and some bumpy surface noise in the screenshots. That is less a hyperparameter problem and more a capture / scene-scope problem — useful signal for the next shoot (tighter framing, less glare, better isolation of the object).
+Not great. The car is small and shiny, and I reconstructed the whole scene, table included, instead of masking out the object. You can see leftover ground and bumpy noise on the surface. I think this comes mostly from how I captured it, so the next shoot needs tighter framing, less glare and a cleaner background.
 
 ---
 
@@ -117,10 +118,10 @@ The car is small, shiny, and I reconstructed the whole scene (table included), n
 
 ## What I took away
 
-- Capture and COLMAP registration beat training knobs. Sub-~85% registration → artifacts no amount of extra iters fix.  
-- Half-res inputs (`camera-res-scale-factor 0.5`) were enough to avoid OOM on 6GB.  
-- A novel-view splat and a collision-worthy mesh are different products. SuGaR is the bridge I used; interop between toolchains was half the work.  
-- Mesh quality on this car is capped by object size, reflectance, and reconstructing the whole table — not just by SuGaR settings.
+- Capture quality and COLMAP registration matter more than training settings. When fewer than about 85% of images registered, I got artifacts that more iterations did not fix.
+- Half-resolution inputs (`camera-res-scale-factor 0.5`) were enough to avoid running out of memory on 6 GB.
+- A splat that looks right from new angles and a mesh you can collide with are different products. SuGaR was my bridge, and getting the toolchains to agree took about half the total time.
+- The mesh quality here is limited by the object's size, its shine, and reconstructing the whole table, more than by SuGaR settings.
 
 ---
 
