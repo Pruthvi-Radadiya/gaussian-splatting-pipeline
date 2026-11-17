@@ -65,7 +65,7 @@ You need an NVIDIA GPU (6 GB or more), nerfstudio, COLMAP and ffmpeg. I use `--p
 
 ---
 
-## Pipeline 2 — Hot Wheels → SuGaR mesh
+## Pipeline 2 - Hot Wheels → SuGaR mesh
 
 A splat looks like the object from new angles, but it is still a cloud of blobs. Unity, physics, and most sim tools want triangles. For that I ran [SuGaR](https://github.com/Anttwo/SuGaR) (surface-aligned Gaussian Splatting) on a Hot Wheels car:
 
@@ -106,10 +106,10 @@ Not great. The car is small and shiny, and I reconstructed the whole scene, tabl
 
 ## Stack
 
-- [nerfstudio](https://docs.nerf.studio/) (`splatfacto` / gsplat) — Pipeline 1  
-- [Inria 3D Gaussian Splatting](https://github.com/graphdeco-inria/gaussian-splatting) — vanilla model for SuGaR  
-- [SuGaR](https://github.com/Anttwo/SuGaR) — surface align + mesh extract — Pipeline 2  
-- COLMAP — SfM / poses  
+- [nerfstudio](https://docs.nerf.studio/) (`splatfacto` / gsplat) - Pipeline 1  
+- [Inria 3D Gaussian Splatting](https://github.com/graphdeco-inria/gaussian-splatting) - vanilla model for SuGaR  
+- [SuGaR](https://github.com/Anttwo/SuGaR) - surface align + mesh extract - Pipeline 2  
+- COLMAP - SfM / poses  
 - PyTorch + CUDA (11.8 in the training envs; system had 12.4)  
 - ffmpeg, Blender  
 - Hardware: RTX 3060 6GB, WSL2 Ubuntu
@@ -131,6 +131,6 @@ Not great. The car is small and shiny, and I reconstructed the whole scene, tabl
 - [x] Photos → vanilla 3DGS → SuGaR refined mesh → Blender  
 - [ ] Fail-fast check on COLMAP registration before burning a full train  
 - [ ] Cleaner object-centric capture and a second mesh pass  
-- [ ] Eventually try the mesh / twin path in a sim stack (Isaac / Omniverse) — not done yet
+- [ ] Eventually try the mesh / twin path in a sim stack (Isaac / Omniverse) - not done yet
 
 Upstream SuGaR and Inria 3DGS are their own repos with their own licenses. This repo documents the pipeline I ran and ships the Pipeline 1 helper script + result visuals.
